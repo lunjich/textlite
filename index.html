@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iPhone Minimal Chat</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; margin: 20px; background: #f5f5f7; }
+        #chat-box { width: 100%; max-width: 500px; height: 300px; border: 1px solid #ccc; background: white; overflow-y: scroll; padding: 10px; margin-bottom: 10px; border-radius: 8px; }
+        .system { color: #888; font-style: italic; font-size: 0.9em; margin: 5px 0; }
+        .msg { margin: 5px 0; }
+        .msg-user { font-weight: bold; color: #007aff; }
+        #setup, #chat-room { max-width: 500px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .hidden { display: none; }
+        input, button { padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
+        button { background: #007aff; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="setup">
+        <h3>Enter a Username</h3>
+        <input type="text" id="username" placeholder="Your name...">
+        <button onclick="joinChat()">Enter Chat</button>
+    </div>
+
+    <div id="chat-room" class="hidden">
+        <h3 id="room-title">Room: </h3>
+        <div id="chat-box"></div>
+        <input type="text" id="message" placeholder="Type a message..." style="width: 70%;">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        // Automatically extract room name from URL query parameter '?room=xyz'
+        // If no room is provided, default to 'lobby'
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomName = urlParams.get('room') || 'lobby';
+        
+        document.getElementById('room-title').innerText = `Room: ${roomName}`;
+
+        let ws;
+        let username;
+
+        function joinChat() {
+            username = document.getElementById('username').value.trim();
+            if (!username) return alert("Please enter a username!");
+
+            // Hide login, show chat
+            document.getElementById('setup').classList.add('hidden');
+            document.getElementById('chat-room').classList.remove('hidden');
+
+            // Establish WebSocket connection dynamically based on current host
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+            ws = new WebSocket(`${wsProtocol}${window.location.host}`);
+
+            ws.onopen = () => {
+                // Tell the server who we are and what room we want
+                ws.send(JSON.stringify({ type: 'join', room: roomName, username: username }));
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                const chatBox = document.getElementById('chat-box');
+
+                if (data.type === 'system') {
+                    chatBox.innerHTML += `<div class="system">${data.text}</div>`;
+                } else if (data.type === 'message') {
+                    chatBox.innerHTML += `<div class="msg"><span class="msg-user">${data.user}:</span> ${data.text}</div>`;
+                }
+                chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to bottom
+            };
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('message');
+            const text = input.value.trim();
+            if (!text) return;
+
+            ws.send(JSON.stringify({ type: 'chat', text: text }));
+            input.value = '';
+        }
+
+        // Allow pressing Enter key to send
+        document.getElementById('message').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
