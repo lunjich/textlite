@@ -141,9 +141,9 @@
             document.getElementById('setup').classList.add('hidden');
             document.getElementById('chat-room').classList.remove('hidden');
 
-            // Establish WebSocket connection dynamically based on current host
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-            ws = new WebSocket(`${wsProtocol}${window.location.host}`);
+         // Automatically switches between ws:// and wss:// depending on how the page is loaded
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const socket = new WebSocket(`${protocol}//${window.location.host}`);
 
             ws.onopen = () => {
                 // Tell the server who we are and what room we want
